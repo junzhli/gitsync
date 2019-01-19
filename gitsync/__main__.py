@@ -44,46 +44,73 @@ logger = logging.getLogger('gitsync')
 
 
 def init_files(repo_dir, ignore=[]):
-    """[summary]
-    
+    """Initialize all necessary files to proceed
+       * alter .gitignore file adapted to newly ignore list
+
     Arguments:
-        repo_dir {[type]} -- [description]
-    
+        repo_dir {str} -- Repo Path
+
     Keyword Arguments:
-        ignore {list} -- [description] (default: {[]})
+        ignore {list} -- Ignore patterns (default: {[]})
     """
     # create ignore list
     ignore_list = ['.state']
     ignore_list.extend(ignore)
-    ignore_list = list(set(ignore_list))
+    ignore_list = sorted(list(set(ignore_list)))
     with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
         for item in ignore_list:
             f.write(item+'\n')
 
+
 def precheck(files, dirs):
+    """Checks whether the files/dirs user specified exists or are valid
+    
+    Arguments:
+        files {list} -- File list
+        dirs {list} -- Dir list
+    
+    Raises:
+        AssertionError -- Raises if the given file doesn't exist or isn't a valid file
+        AssertionError -- Raises if the given dir doesn't exist or isn't a valid dir
+    """
     for f in files:
         if not os.path.isfile(f):
-            raise Exception('Item declared in files: {0} is not a file'.format(f))
+            raise AssertionError(
+                'Item declared in files: {0} is not a file'.format(f))
 
     for d in dirs:
         if not os.path.isdir(d):
-            raise Exception('Item declared in dirs {0} is not a directory'.format(d))
+            raise AssertionError(
+                'Item declared in dirs {0} is not a directory'.format(d))
+
 
 def clean_up_repo(files, dirs, repo_dir, ignore=IGNORE_PATTERNS):
-    # files_in_items = list(filter(lambda item: os.path.isfile(os.path.join(repo_dir, item)), files))
-    # dirs_in_items = list(filter(lambda item: os.path.isdir(os.path.join(repo_dir, item)), dirs))
-    # print(files_in_items, dirs_in_items)
+    """Clean up all files/dirs not included in the given list (files/dirs) 
+    
+    Arguments:
+        files {[type]} -- [description]
+        dirs {[type]} -- [description]
+        repo_dir {[type]} -- [description]
+    
+    Keyword Arguments:
+        ignore {[type]} -- [description] (default: {IGNORE_PATTERNS})
+    """
     items_in_repo_root = os.listdir(repo_dir)
-    files_in_repo_root = list(filter(lambda item: os.path.isfile(os.path.join(repo_dir, item)), items_in_repo_root))
-    dirs_in_repo_root = list(filter(lambda item: os.path.isdir(os.path.join(repo_dir, item)), items_in_repo_root))
+    files_in_repo_root = list(filter(lambda item: os.path.isfile(
+        os.path.join(repo_dir, item)), items_in_repo_root))
+    dirs_in_repo_root = list(filter(lambda item: os.path.isdir(
+        os.path.join(repo_dir, item)), items_in_repo_root))
     # print(files_in_repo_root, dirs_in_repo_root)
 
-    be_cleaned_files = [item for item in files_in_repo_root if item not in files]
+    be_cleaned_files = [
+        item for item in files_in_repo_root if item not in files]
     be_cleaned_dirs = [item for item in dirs_in_repo_root if item not in dirs]
-    be_cleaned_files = [item for item in be_cleaned_files if item not in ignore]
+    be_cleaned_files = [
+        item for item in be_cleaned_files if item not in ignore]
     be_cleaned_dirs = [item for item in be_cleaned_dirs if item not in ignore]
 
-    logger.debug('Cleanup checks result:\n\t\tbe_cleaned_files {0}\n\t\tbe_cleaned_dirs {1}'.format(be_cleaned_files, be_cleaned_dirs))
+    logger.debug('Cleanup checks result:\n\t\tbe_cleaned_files {0}\n\t\tbe_cleaned_dirs {1}'.format(
+        be_cleaned_files, be_cleaned_dirs))
     for f in be_cleaned_files:
         if f not in ignore:
             delete_file(os.path.join(repo_dir, f))
@@ -92,7 +119,11 @@ def clean_up_repo(files, dirs, repo_dir, ignore=IGNORE_PATTERNS):
         if d not in ignore:
             delete_dir(os.path.join(repo_dir, d))
 
+
 def main():
+    """Entrypoint to 'gitsync' command-line tool
+    
+    """
     parser = argparse.ArgumentParser(
         description='File-sync integrated with Git system solution tool')
     parser.add_argument('-d', '--debug',
@@ -134,7 +165,7 @@ def main():
         dirs_mapping = config['dirs']
         ignore_files = config['ignore']['patterns']
         ignore_files.extend(IGNORE_PATTERNS)
-        ignore_files = list(set(ignore_files))
+        ignore_files = sorted(list(set(ignore_files)))
     except Exception as error:
         logger.error('Can\'t load config: {0}'.format(error))
         sys.exit(1)
@@ -145,7 +176,8 @@ def main():
         repo = Repo(repo_dir)
         remote = Remote(repo, 'origin')
         if not remote.exists():
-            logger.error('Can\'t find \'origin\' remote url. Please set a \'origin\' remote and upstream branch at first to proceed!')
+            logger.error(
+                'Can\'t find \'origin\' remote url. Please set a \'origin\' remote and upstream branch at first to proceed!')
             sys.exit(1)
         logger.debug('Repo has been loaded successfully')
         logger.info('Pulling from repo...')
@@ -154,9 +186,10 @@ def main():
         logger.error('Invalid repo. Please check it again!')
         sys.exit(1)
     except NoSuchPathError as error:
-        logger.error('No directory \'.git\' found. Did you initialize git project?!')
+        logger.error(
+            'No directory \'.git\' found. Did you initialize git project?!')
         sys.exit(1)
-    
+
     if repo.bare:
         logger.error('Repo can\'t be a bare!')
         sys.exit(1)
@@ -173,10 +206,10 @@ def main():
         logger.error('Prechecks failed!')
         logger.error(error)
         sys.exit(1)
-    
 
     logger.debug('Perform cleanup task on repo...')
-    clean_up_repo(files_mapping.values(), dirs_mapping.values(), repo_dir, ignore=ignore_files)
+    clean_up_repo(files_mapping.values(), dirs_mapping.values(),
+                  repo_dir, ignore=ignore_files)
 
     logger.debug('Proceed to check file changes')
     logger.debug('Detect if the sync list changes...')
@@ -185,11 +218,13 @@ def main():
         logger.debug('Last sync record found!')
         prev_config = load_last_sync(repo_dir)
         print(prev_config)
-    
+
     # Check whether folder states are identical
     logger.info('Check files whether if updated')
-    src_files_to_be_copied, src_dirs_to_be_copied, dst_files_to_be_deleted, dst_dirs_to_be_deleted = check_sync_state(prev_config, config, repo_dir)
-    logger.debug('Sync state: \n\t\tFiles be copied {0}\n\t\tDirs be copied {1}\n\t\tFiles be deleted {2}\n\t\tDirs be deleted {3}'.format(src_files_to_be_copied, src_dirs_to_be_copied, dst_files_to_be_deleted, dst_dirs_to_be_deleted)) 
+    src_files_to_be_copied, src_dirs_to_be_copied, dst_files_to_be_deleted, dst_dirs_to_be_deleted = check_sync_state(
+        prev_config, config, repo_dir)
+    logger.debug('Sync state: \n\t\tFiles be copied {0}\n\t\tDirs be copied {1}\n\t\tFiles be deleted {2}\n\t\tDirs be deleted {3}'.format(
+        src_files_to_be_copied, src_dirs_to_be_copied, dst_files_to_be_deleted, dst_dirs_to_be_deleted))
 
     # Start to perform sync task (overwrite dst-file / delete dst-file / copy entire src-folder(src-file) to dst-folder(dst-file))
     change_indicator = 0
@@ -220,7 +255,8 @@ def main():
     if (src_files_to_be_copied):
         for src_path, dst_path in src_files_to_be_copied.items():
             try:
-                logger.debug('Copying file {0} to {1}'.format(src_path, dst_path))
+                logger.debug('Copying file {0} to {1}'.format(
+                    src_path, dst_path))
                 copy_file(src_path, dst_path)
                 logger.debug(' ... Successfully')
             except Exception as error:
@@ -232,7 +268,8 @@ def main():
     if (src_dirs_to_be_copied):
         for src_path, dst_path in src_dirs_to_be_copied.items():
             try:
-                logger.debug('Copying directory {0} to {1}'.format(src_path, dst_path))
+                logger.debug('Copying directory {0} to {1}'.format(
+                    src_path, dst_path))
                 copy_dir(src_path, dst_path, ignore=ignore_files)
                 logger.debug(' ... Successfully')
             except Exception as error:
@@ -251,7 +288,7 @@ def main():
 
     logger.info('Stage modified files into repo...')
     repo.git.add(A=True)
-    
+
     logger.info('Commit to repo...')
     repo.index.commit('[(auto-git) leave it here for later editing]')
 
@@ -265,6 +302,7 @@ def main():
         logger.error('Failed to save current sync state! {0}'.format(error))
         sys.exit(1)
     logger.info('Finished')
+
 
 if __name__ == '__main__':
     main()
