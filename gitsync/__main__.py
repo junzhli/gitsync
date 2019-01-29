@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from git import Repo, Remote, InvalidGitRepositoryError, NoSuchPathError
 from .lib import *
+from gitsync import __version__
 import os
 import sys
 import logging
@@ -132,8 +133,10 @@ def main():
                         help='show more message for debugging')
     parser.add_argument('--config_file', help='Specify the location of the settings (Default value: settings.json)',
                         type=str, default=os.path.join(os.getcwd(), 'settings.json'))
-    parser.add_argument('--init', help='Create a default of settings',
+    parser.add_argument('--init', help='Create a template configuration file',
                         action='store_true', default=False)
+    parser.add_argument('--version', help='Print the GitSync version number',
+                        action='version', version=__version__)
 
     # Read a set of arguments
     args = parser.parse_args()
@@ -147,11 +150,10 @@ def main():
             logging.root.removeHandler(handler)
         logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
-    # DEBUG
     logger.debug('Config file: {0}'.format(CONFIG_FILE))
-    logger.debug('Generate default setting.json: {0}'.format(INIT))
-
+    
     if INIT:
+        logger.info('Generate a template setting.json')
         with open('settings_default.json', 'w') as f:
             f.writelines(json.dumps(DEFAULT_SETTING, indent=4))
         sys.exit()
@@ -217,7 +219,6 @@ def main():
     if check_last_sync(repo_dir):
         logger.debug('Last sync record found!')
         prev_config = load_last_sync(repo_dir)
-        print(prev_config)
 
     # Check whether folder states are identical
     logger.info('Check files whether if updated')
@@ -235,8 +236,9 @@ def main():
                 delete_file(file_path)
                 logger.debug(' ... Successfully')
             except Exception as error:
-                raise error
                 logger.debug(' ... Failed')
+                raise error
+                
         logger.debug('Files deletion finished')
         change_indicator += 1
 
@@ -247,8 +249,8 @@ def main():
                 delete_dir(dir_path)
                 logger.debug(' ... Successfully')
             except Exception as error:
-                raise error
                 logger.debug(' ... Failed')
+                raise error
         logger.debug('Dirs deletion finished')
         change_indicator += 1
 
@@ -260,8 +262,8 @@ def main():
                 copy_file(src_path, dst_path)
                 logger.debug(' ... Successfully')
             except Exception as error:
-                raise error
                 logger.debug(' ... Failed')
+                raise error
         logger.debug('Files addition finished')
         change_indicator += 1
 
@@ -273,8 +275,8 @@ def main():
                 copy_dir(src_path, dst_path, ignore=ignore_files)
                 logger.debug(' ... Successfully')
             except Exception as error:
-                raise error
                 logger.debug(' ... Failed')
+                raise error
         logger.debug('Dirs addition finished')
         change_indicator += 1
 
