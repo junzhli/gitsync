@@ -17,7 +17,7 @@ Python 3.x or higher is required
 ```shell
 $ pip3 install git+git://github.com/junzhli/gitsync.git
 ```
-### From Local machine
+### From local machine
 ```shell
 $ git clone https://github.com/junzhli/gitsync.git
 $ cd gitsync
