@@ -44,6 +44,11 @@ Generate a template settings.json
   * `patterns`
     * File/folder being ignored
 
+#### Sync files/folders
+```shell
+$ gitsync --config_file /folder/settings.json
+```
+
 ## Known issues
 
 ## Contribution
