@@ -1,6 +1,6 @@
 # GitSync
 Sync tool integrated with Git system. It is meant to help developers to back up everything about portable settings and codebase like 
-* Dotfile (`.vimrc`, `.zshrc`, `.bashrc`, `.eslint)
+* Dotfile (`.vimrc`, `.zshrc`, `.bashrc`, `.eslint`)
 * Workplace config (`.vscode`)
 * Source code
 
